@@ -1,0 +1,8 @@
+{
+  "out": "processed",
+  "hz": 50,
+  "window": 90,
+  "step": 45,
+  "cutoff": 8,
+  "normalization": "train-only standard score"
+}

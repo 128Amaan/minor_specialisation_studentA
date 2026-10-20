@@ -1,0 +1,1261 @@
+Received December 2, 2019, accepted January 6, 2020, date of publication January 13, 2020, date of current version January 21, 2020.
+Digital Object Identifier 10.1 109/ACCESS.2020.2966142
+Data Augmentation for Inertial Sensor-Based
+Gait Deep Neural Network
+LAM TRAN
+ 1,2 AND DEOKJAI CHOI
+ 2
+1Information Technology Faculty, Ho Chi Minh University of Sciences, Ho Chi Minh city 700000, Vietnam
+2Electronics and Computer Engineering School, Chonnam National University, Gwangju 61186, South Korea
+Corresponding author: Lam Tran (thlam@ﬁt.hcmus.edu.vn)
+This work was supported by the Korea under Grant NRF-2017R1D1A 1B03035343.
+ABSTRACT Inertial sensor-based gait has been discovered as an attractive method for user recognition.
+Recently, with the approaching of deep learning techniques, new state-of-the-art researches have been
+established. However, the scarcity of training data still endures as an obstacle that impedes to build
+a robust deep gait model. In this study, we address that problem by proposing a novel approach for
+inertial sensor-based gait data augmentation. First, two label-preserving transformation algorithms, namely
+Arbitrary Time Deformation (A TD) and Stochastic Magnitude Perturbation (SMP), are proposed to generate
+more training data from the real gait data. The A TD algorithm adjusts the timing information of gait data
+with random values, on the other hand, SMP alters the magnitude arbitrarily, to create variations on the
+augmenting data. Then, we design a generic gait recognition model using convolutional neural network,
+in which, the A TD and SMP algorithms are coordinated appropriately to produce augmenting data varied
+naturally in both time and magnitude as real data. The proposed approach was evaluated on two public
+datasets, one was collected in unconstrained conditions, and the other had the largest number of participating
+users. The experiment showed that, under different amounts of training data, using A TD or SMP alone could
+increase the recognition performance effectively, and their combination even attained higher accuracy. With
+A TD and SMP , our model achieved competitive performance on both two datasets comparing to state-of-
+the-art researches.
+INDEX TERMS Gait recognition, inertial sensor data, accelerometer data, CNN gait network, data
+augmentation.
+I. INTRODUCTION
+Gait recognition refers to the task of verifying or identify-
+ing humans by their walking pattern. Traditional researches
+in this ﬁeld mainly base on computer vision [1], [2],
+or ﬂoor sensor technologies [3], [4], which are useful
+for the context of video surveillance or security access
+control in restricted areas. The development of micro-
+machining technique has opened a new gait recognition
+approach, which uses inertial sensors ( e.g., accelerometer,
+gyroscope) attached to the human body to capture the walk-
+ing pattern [5]. As offering various attractive advantages
+(e.g., small-size, lightweight, mobility, low-cost, implicit
+operation), this approach has attracted signiﬁcant attention
+from researchers worldwide [6]–[12], and achieved promis-
+ing results. Despite those merits, most gait recognition
+The associate editor coordinating the review of this manuscript and
+approving it for publication was Md. Kamrul Hasan
+ .
+researches were conducted in laboratory environment, under
+certain operation constraints, and are infeasible for practical
+applications [7], [13].
+Although deep learning techniques have been applied
+and established new state-of-the-art researches in this ﬁeld
+recently [9]–[12], [14]–[16], the scarcity of training data
+still endures as an obstacle that impedes to build a robust
+deep gait model [7]. Speciﬁcally, training a deep network
+usually requires a large and diverged dataset which cov-
+ers a substantial number of data instances possibly occur-
+ring in practice [17], [18]. However, most of the available
+inertial sensor-based gait datasets could not satisfy such
+requirements. For instance, the published datasets which were
+collected under realistic conditions, just contain data of a
+limited number of users ( e.g., 20 users [19], 38 users [20],
+51 users [21]). On the other hand, the dataset which has a large
+user population ( i.e., 744 users), has limited data instances
+for each user, and was collected in a constrained environment
+12364 This work is licensed under a Creative Commons Attribution 4.0 License. For more information, see http://creativecommons.org/licenses/by/4.0/ VOLUME 8, 2020
+L. Tran, D. Choi: Data Augmentation for Inertial Sensor-Based Gait Deep Neural Network
+(i.e., each user performed two level-walk sequences of 9
+m) [22]. Typically, collecting a dataset satisfying the above
+requirements is a difﬁcult and high-cost task. Thus, it is
+desired to have a practical and effective method to obtain
+more training data without performing the data acquisition
+process.
+Data augmentation by label-preserving transformation is
+an elegant strategy to address the data scarcity problem. In
+this strategy, the amount of training data is increased multiple
+times by introducing noise or artiﬁcially modifying the avail-
+able data so that they are different but still represent a same
+identity [23], [24]. Data augmentation has showed its effec-
+tiveness on various machine learning tasks ( e.g., computer
+vision [23]–[27], speech and language processing [28]–[30]).
+Unfortunately, to the best of our knowledge, there is no pub-
+lished study that proposes and analyzes a data augmentation
+method dedicated to gait. In addition, although there are
+substantial data augmentation methods for other data types
+(e.g., image, voice), they could not be adopted for gait as
+each data type has a different structure, meaning and variation
+pattern.
+Data augmentation is a promising approach to enhance the
+robustness of inertial sensor-based deep gait model. However,
+to effectively improve the performance, the augmentation
+method needs to meet the following requirements. First,
+the augmenting data should have certain variations to be
+relatively different from the real data instance that it is derived
+from. Second, the generating data should inherit the crucial
+information from the real data so that they both represent a
+same identity. Third, the variations introducing in augmenting
+data should be highly possible to happen in practice so that the
+trained model will be more robust in real environments. Final,
+the data augmentation method should be applicable to dif-
+ferent sensor models, regardless of their speciﬁcations ( e.g.,
+sampling rate, sensitivity). Speciﬁcally, as having different
+settings, each sensor may have its own range value and varia-
+tion. The data augmentation method should be able to detect
+such properties and generate augmenting data accordingly.
+Motivating by the promising and necessity of the work,
+in this study, we propose a novel method for inertial
+sensor-based gait data augmentation. Our main ideas to fulﬁll
+the aforementioned requirements and effectively improve the
+performance are explained as follows. We observed that: (i)
+the gait data variation could be decomposed into two domains
+as time and magnitude; and (ii) the variation of real data is
+usually resulted from the combination of variations in these
+two domains (see Section III-B.1). So, we proposed two
+algorithms, namely Arbitrary Time Deformation (ATD) and
+Stochastic Magnitude Perturbation (SMP) , to create random
+variations in the time and magnitude domains, respectively.
+Intuitively, A TD plays a role as the outside factors which
+cause variation in timing information ( e.g., human walking
+speed, unstable sampling rate of the sensor). On the other
+hand, SMP is used to simulate the impact of those fac-
+tors affecting the magnitude ( e.g., walking surface, footwear,
+clothing). Both of them are designed so that the variations
+are added randomly to make the augmentation data arbitrarily
+different from the real data, however, the critical information
+of real gait data is preserved on the augmenting data. In addi-
+tion, gait data acquired in real conditions is always affected
+by various factors and varies in both time and magnitude
+domains. So, we design a generic deep gait recognition model
+based on the convolutional neural network (CNN), in which,
+A TD and SMP are coordinated effectively to achieve optimal
+performance. In summary, the main contributions of our study
+are outlined as follows:
+• First, by observing how the real gait data vary in prac-
+tice, we proposed two data augmentation algorithms as
+A TD and SMP to address the data scarcity problem and
+improve the robustness of deep gait model (Section III-
+B). To the best of our knowledge, there was no study
+addressing this task before.
+• Second, we designed a generic deep CNN gait model for
+gait identiﬁcation, in which the proposed augmentation
+algorithms were coordinated appropriately to improve
+classiﬁcation performance (Section III).
+• Third, we extended the proposed identiﬁcation gait
+model to construct the veriﬁcation model using trans-
+fer learning and one-class support vector machine
+(OCSVM) [31] (Section IV -D.1). By that, we aimed to
+additionally conﬁrm the effectiveness of augmentation
+algorithms on the veriﬁcation task.
+• Fourth, we constructed a comprehensive experiment
+to evaluate the proposed methods using the realistic
+dataset ( i.e., Chonnam National University gait dataset
+(CNU) [20]) and the largest gait dataset ( i.e., Osaka
+University gait dataset (OU-ISIR) [22]) (Section IV).
+By CNU and OU-ISIR, we analyzed our proposed
+methods under realistic conditions and large user pop-
+ulation, respectively. Moreover, as they were captured
+using different sensor models, we demonstrated that
+our algorithms can operate effectively on different
+sensor speciﬁcations. With the proposed data augmen-
+tation algorithms, our model performance was sig-
+niﬁcantly enhanced and achieved competitive results
+(i.e., for CNU dataset, our model achieved the iden-
+tiﬁcation accuracy (ACC) of 96 .24 %, and the equal
+error rate (EER) on veriﬁcation task of 1 .62 %;
+for OU-ISIR dataset, it achieved 89 .99% ACC and
+4.49% EER).
+• Last, we provided a detailed analysis of the proposed
+data augmentation algorithms to demonstrate their effec-
+tiveness under different amounts of real training data
+and augmenting data. In addition, the instruction on
+how to select appropriate settings for the augmentation
+algorithms to achieve optimal performance was also
+given.
+II. RELATED WORK
+In this section, we present a review of state-of-the-art
+researches related to our study, which are divided into two
+groups as follows.
+VOLUME 8, 2020 12365
+L. Tran, D. Choi: Data Augmentation for Inertial Sensor-Based Gait Deep Neural Network
+A. GAIT RECOGNITION
+For a long time, human gait has been discovered to contain
+individual discriminative information, which can be used to
+identify or verify the owner [32], [33]. By the data acquiring
+techniques, the gait recognition researches could be cate-
+gorized into three approaches: computer vision, ﬂoor sen-
+sor, and inertial-sensor [13]. The computer vision approach
+uses the user’s video (while he/she is walking) as the data
+source for recognition [1], [2]. This approach is potential for
+the context of video surveillance, security access control in
+restricted areas, or early detection of interest person. The
+ﬂoor sensing-based method uses the signals sampling from
+embedded sensors in the smart mat, or ﬂoor vibration sensors
+to identify the walking user [3], [4]. This approach is useful to
+the task of transparently recognizing people when they enter
+a speciﬁc area.
+Along with the development of technology, inertial sensors
+are increasingly adopted in many practical applications, and
+widely embedded in mobile/wearable devices ( e.g., smart-
+phone, smartwatch, inertial measurement unit (IMU)). This
+technology offers a new gait recognition approach, in which,
+the signal data sampling by inertial sensors attached to the
+user’s body (while he/she is walking) is used as data source
+for user recognition [7], [13]. The ﬁrst gait recognition study
+using inertial sensor was conducted by Ailisto et al. [5].
+Offering many attractive advantages ( e.g., small size, mobil-
+ity, low cost, implicit operation), this approach quickly
+received signiﬁcant research effort after that, and achieved
+promising results [6]–[8], [14]–[16], [34]. In the beginning
+stage, conventional machine learning and pattern recognition
+techniques were adopted to discover from raw data the mean-
+ingful feature/template for user identiﬁcation/veriﬁcation.
+The study [7] provides a detailed and sufﬁcient summariza-
+tion for all researches following such approaches.
+Recently, deep learning has gained an extraordinary
+development and dramatically improved the state-of-the-art
+researches in many pattern recognition and machine learn-
+ing tasks such as speech recognition, visual object recog-
+nition/detection [35]. Following that trend, many studies
+have adopted deep leaning techniques for the task of inertial
+sensor-based gait recognition and achieved new state-of-the-
+art results [9]–[12], [14]–[16], [36].
+Speciﬁcally, Gadaleta and Rossi [10] were the volun-
+teers who conducted the ﬁrst CNN framework named IDNet
+for smartphone-based gait recognition. In that research,
+the accelerometer and gyroscope signals were segmented into
+gait cycles, following by the orientation-invariant transforma-
+tion and normalization to get the ﬁxed-length gait cycles. The
+gait cycle was used as the input of CNN to extract the deep
+gait features which were then used for predicting user iden-
+tity. The IDNet was evaluated on a dataset of 50 subjects and
+achieved a very promising performance as 0.15% equal error
+rate (EER). After that, several studies [14], [36] followed this
+trend by proposing others CNN architectures, and evaluated
+with different datasets ( e.g., [19], [22]). On the other hand,
+some researches adopted CNN on the fused data of multiple
+sensors placing in different positions of the human body to
+improve the accuracy [9], [11]. Instead of directly using gait
+signals as the input of CNN, Zhao and Zhou [12] trans-
+formed gait signals to angle embedded gait dynamic image
+(AE-GDI), which is invariant to device’s rotation or disorien-
+tation. The CNN then used AE-GDI image as the input for
+predicting the owner’s identity. On the newest research [16],
+recurrent neural network (RNN) was ﬁrstly adopted on this
+task, and a promising result was reported.
+B. DATA AUGMENTATION
+Data augmentation is an elegant and effective approach to
+address the data scarcity problem and improve the robustness
+of deep learning model. In this approach, the amount of
+training data is increased multiple times by introducing noise
+or appropriately modifying the original data [23], [24]. In
+deep learning, with more training data, we can reduce the
+over-ﬁtting, and train a more robust deep model. Due to its
+effectiveness, data augmentation has been widely adopted in
+various tasks ( e.g., image [23]–[27], speech recognition and
+language processing [28]–[30]).
+Despite its promising, data augmentation has not been
+received proper research attention in inertial sensor-based
+gait recognition. To the best of our knowledge, there is no
+published research that focuses on proposing and analyzing a
+data augmentation method dedicated to inertial sensor-based
+gait data. There were only some simple methods, which were
+included in [9], [14]. In [9], each gait signal was diversiﬁed
+using a value drawn from a uniform distribution in the range
+of [−0.2, 0.2] to make an augmenting instance. The method
+described in [14] generated new gait sequences by three
+steps: ﬁrstly, adding Gaussian noise with σ= 0.01 to each
+original signal; then, scaling the length to a random value
+in the range of [0 .7, 1.1]; ﬁnally, interpolating to add more
+values. Despite their effectiveness, they lost the generality.
+Speciﬁcally, these methods are speciﬁc for the adopted sensor
+models. Each sensor type has its own sensitivity and operating
+range value specifying by the manufacturer. Then, to adopt
+these methods to data collected by other sensor models, such
+settings need to be re-identiﬁed. In addition, walking speed of
+a human is unstable. Thus, the nature gait signal usually varies
+in both the magnitude and acquiring time (Section III-B.1),
+which can not be simulated by the methods in [9], [14]. In
+summary, proposing a generic inertial sensor-based gait data
+augmentation method, and providing its detailed analysis are
+still the uncompleted tasks.
+III. INERTIAL SENSOR-BASED GAIT RECOGNITION
+MODEL
+In this section, we describe the inertial sensor-based gait
+identiﬁcation model using convolutional neural network,
+in which, the proposed data augmentation algorithms are
+employed to improve the network performance. Here, we pro-
+vide an overview of the model. The details of each processing
+step will be explained after that.
+12366 VOLUME 8, 2020
+L. Tran, D. Choi: Data Augmentation for Inertial Sensor-Based Gait Deep Neural Network
+FIGURE 1. The processing blocks of the inertial sensor-based gait identification model using deep convolutional neural network, in which the data
+augmentation algorithms are employed to improve the performance.
+Overview: The overall processing of the proposed gait
+identiﬁcation model is depicted in Figure 1. Given raw gait
+data captured by the acceleration sensor, some preprocessing
+steps are performed to eliminate noise and impact of device’s
+orientation instability. Then, the gait signals sequence are
+segmented into a set of gait cycles. For easy discriminating,
+we call the cycle segmented by this step as real gait cycle .
+After that, the A TD algorithm is adopted to generate more
+training gait cycles varying in time domain. The real gait
+cycles, along with the output of A TD algorithm, are used as
+input of the SMP algorithm, to obtain the data varying in
+magnitude, and in both time and magnitude, respectively. All
+the augmenting gait cycles, and the real cycles, are used for
+training a deep CNN to extract deep features, which are then
+used for user classiﬁcation using fully connected network.
+Note that, the state-of-the-art researches show that,
+the gyroscope data could be used along with the
+accelerometer data to improve the recognition perfor-
+mance [10], [14], [16]. However, in this study, we focus on
+proposing and analyzing a data augmentation approach. In
+addition, the processing techniques of gyroscope data are
+almost similar to those of accelerometer data. Thus, we just
+use the accelerometer data for the whole model, an extension
+that uses gyroscope data could be easy to ﬁnd in related
+researches.
+A. GAIT DATA PREPROCESSING
+For data preprocessing and gait cycle extraction, we utilize
+the methods proposed in [20], which are brieﬂy summarized
+as follows.
+1) NOISE AND IMPACT OF DISORIENTATION ELIMINATING
+The main data for using are the acceleration signals sampling
+by accelerometer. Typically, an acceleration signal acting on
+the sensor at the time t is represented by a 3-dimensional
+vector a =
+[
+aX aY aZ]⊤ ∈ R3, where aX , aY and aZ
+are the forces acting on the sensor in the X , Y and Z axes,
+respectively (see [20]). The raw acceleration data comprise
+a sequence of signals
+{a1, a2, ... as} sampling on sensor
+respectively at the time
+{t1, t2, ... ts}, where s is the number
+of signals.
+The ﬁrst step of preprocessing is noise ﬁltering, in which,
+the Daubechies orthogonal wavelet with the decomposition at
+level 2 [37] is used to clarify the noise caused from the data
+acquisition process. Then, the problem of device’s orientation
+instability is addressed by leveraging the orientation sen-
+sor, which is widely embedded in most of mobile/wearable
+devices. This sensor provides the rotation angles between
+coordinate systems of the device and the Earth. A signal
+sampling from the orientation sensor is also represented by a
+3-dimensional vector o =
+[α β γ]⊤, where α,β and γ
+are the rotation degrees along the axes of X , Y and Z ,
+respectively. Similar to accelerometer, the orientation sensor
+also outputs a sequence of samples
+{o1, o2, ... os}, which
+provide the device rotation states at the time
+{t1, t2, ... ts},
+respectively. For each acceleration signal aj (1 ≤ j ≤ s),
+we transform it from the device’s coordinate system, which
+is unstable, to the Earth’s coordinate system, using the ori-
+entation state oj as explained in [20]. By this transformation,
+all acceleration signals are represented in a ﬁxed coordinate
+system, and, the impact of device disorientation on the accel-
+eration signal is eliminated.
+2) GAIT CYCLE SEGMENTATION
+In the next step, the acceleration gait signals are split into
+segments based on the walking cycle, where each segment
+(called gait cycle ) comprises of signals acquired during the
+time of two consecutive normal walking steps. For this task,
+we use the methods proposed in [20]. First, we determine
+the negative peaks, which are those signals having the Z -axis
+magnitude signiﬁcantly smaller than the mean of all signals
+measured on the Z -axis. Intuitively, the negative peaks are
+those signals potentially captured at the time when the leg
+touches the ground. Next, the average gait cycle length ( i.e.,
+the number of signals in each gait cycle) is estimated using the
+auto-correlation. Then, with each pair of consecutive negative
+peaks, if the distance between them is approximate to the gait
+cycle length up to a pre-deﬁned factor, the signals between
+them are extracted as a gait cycle. Figure 2 illustrates the
+acceleration signals in three axes after noise ﬁltering and
+disorientation elimination, where the red verticals denote
+the delimitations of gait cycles detected using the described
+method.
+Assume that there are m gait cycles extracted from a user.
+With each gait cycle i (1≤ i≤ m), we represent it by a 3× ni
+matrix Ai, where ni is the number of signals. We mean aXi,j,
+aYi,j, aZi,j as the magnitude of signal j (1≤ j≤ ni) in Ai, acted
+on the X , Y and Z axes, respectively. In addition, with each
+gait cycle Ai, we represent the timestamp of its signals by a
+vector
+ti=
+[ti,1 ti,2 ... ti,ni], (1)
+where ti,j is the timestamp of the signal j in cycle i.
+B. GAIT DATA AUGMENTATION
+In this section, we describe our approach for inertial
+sensor-based gait data augmentation. First, we show how the
+VOLUME 8, 2020 12367
+L. Tran, D. Choi: Data Augmentation for Inertial Sensor-Based Gait Deep Neural Network
+FIGURE 2. An example of the discrete acceleration signals in X , Y and
+Z axes captured while the user is walking, where the red verticals
+indicate the gait cycles’ delimitations determined in the Z axis.
+FIGURE 3. Acceleration signals of different gait cycles of a same user,
+capturing in X -axis.
+signals in a gait cycle ﬂuctuate when being acquired in real
+conditions. Then, we propose two data augmentation algo-
+rithms, which generate augmenting gait cycles by following
+the ﬂuctuation styles of the real gait cycle.
+1) VARIATION OF GAIT ACCELERATION SIGNALS
+Figure 3 displays the X -axis acceleration signals of different
+gait cycles captured from a same user. We can see that the gait
+signals between different cycles are not identical but greatly
+vary from each other. This variation is caused by the dif-
+ference in acquiring conditions such as walking speed, road
+surface condition, wearing clothes, footwear, backpack [7].
+Here, we only illustrate the variation in X axis, actually,
+it occurs in both three axes X , Y and Z . It seems that the
+variations are chaotic, however, we can decompose them into
+two components as time-based and magnitude-based.
+In the time-based variation, the gait signals of different
+cycles have the same (or approximate) magnitude values,
+however, their acting time (with respect to the starting signal
+of each cycle) is different. So, the time interval between two
+consecutive gait signals is inconstant, and the time length of
+each gait cycle is not identical but ﬂuctuates in a speciﬁc
+range value. The factor causing this type of variation mostly
+is the instability of human walking speed. The gait cycles 2
+and 3 in Figure 3 give an example of this variation. Although
+the magnitude of each signal of two gait cycles is approximate
+to each other, the signals in gait cycle 3 are captured ‘slower’
+than those of cycle 2, and the length of cycle 3 (in time) is
+longer than cycle 2.
+On the other hand, in magnitude-based variation, the gait
+signals of different cycles are captured at the same (or approx-
+imate) time, based on the starting time of each cycle. How-
+ever, they have different magnitude values. The gait cycles 1
+and 2 illustrate this kind of variation. This variation could be
+caused by various factors such as the differences in walking
+surface, wearing clothes or footwear.
+In practice, the capturing gait signals are affected by
+multiples factors simultaneously. Thus, the variation of gait
+signals is usually resulted from the combined effects of
+magnitude-based and time-based variations. The gait cycle 4
+in Figure 3 is an example for this type. Comparing to signals
+of other cycles, the signals of cycle 4 vary in both magnitude
+and acting time, however, the cycle 4 still maintains a similar
+waveform with other cycles.
+2) THE ARBITRARY TIME DEFORMATION
+Observing the time-based variation, we propose the Arbi-
+trary Time Deformation (ATD) algorithm, which generates
+the augmenting gait cycles by introducing random variations
+on the timing domain of the real gait cycles. We design the
+A TD algorithm so that, not only the time length of gait cycle
+(i.e., the time gap between the last and ﬁrst signal in each
+gait cycle) varies, but also the time gap between each pair of
+consecutive signals ﬂuctuates arbitrarily.
+Given m real gait cycles of a user (see Section III-A.2),
+we determine their time length variance δ2τ by
+δ2τ= 1m− 1 m∑i=1 (ti,ni− ti,1−¯τ )2, (2)
+where ni is the number of signal in the cycle i, and¯τ is mean
+of the time length
+¯τ= 1m m∑i=1 (ti,ni− ti,1). (3)
+Next, the averaged number of signals per gait cycle is also
+determined,
+¯n= 1m m∑i=1 ni. (4)
+12368 VOLUME 8, 2020
+L. Tran, D. Choi: Data Augmentation for Inertial Sensor-Based Gait Deep Neural Network
+After that, the A TD-based augmenting gait cycle is gener-
+ated by altering the timestamps and copying the magnitude of
+the real gait cycle. Speciﬁcally, let ˜t= [˜t1˜t2 ... ˜tni] be the
+timestamps of an augmenting gait cycle which is generated
+from a gait cycle i. At ﬁrst,˜t is initialized as the timestamps
+of its based gait cycle, ˜t← ti. Then, the timestamp of each
+signal j (2≤ j≤ ni) in the new cycle is adjusted one-by-
+one with random value. When adjusting the timestamp of a
+signal j, we aim to alter the time gap between the signals j
+and (j− 1), however, preserve the time gap between j and all
+signals after j. So, at the step of adjusting signal j, the times-
+tamp of all signals k (j ≤ k ≤ ni) will be adjusted by a
+value1t,
+˜tk←˜tk+1t, (5)
+where1t is a random number determined by
+1t= x∼ N (0,δ2τ
+¯n )| x+˜tj>˜tj−1. (6)
+That is, timestamp of all signals from j to the last are adjusted
+by1t, which is randomly generated from a Gaussian distri-
+bution of mean zero and variance δ2τ¯n such that1t+˜tj>˜tj−1
+(i.e., adjusting with1t will not make the timestamp j smaller
+than the timestamp ( j− 1)). The process is repeated for all
+signal j (2≤ j≤ ni), thus, the time gap between any two con-
+secutive signal j and (j− 1) is altered arbitrarily, and because
+of that, the time length of new gait cycle also ﬂuctuates
+stochastically.
+We summarize in Algorithm 1 the process of generating
+p×m timestamps of new gait cycles from the timestamps ofm
+real gait cycles. That is, for each real gait cycle i, we generate
+p new ones, following the A TD algorithm.
+3) THE STOCHASTIC MAGNITUDE PERTURBATION
+We present here the Stochastic Magnitude Perturba-
+tion (SMP) algorithm which produces augmenting gait cycle
+by altering the magnitude of each signal in both three axes
+X , Y and Z . By SMP algorithm, the magnitude is altered
+randomly, however, the waveform of the based cycle and the
+smoothness between signals are preserved. Then, to produce
+the augmenting gait cycle varying in both time and mag-
+nitude naturally as real data, we simply perform A TD and
+SMP sequentially ( i.e., the gait cycle augmenting by A TD
+algorithm is used as the input of SMP). Here, for each user,
+we use m real cycles and m× p A TD-based augmenting gait
+cycles as the input of SMP . Totally, there arem′= m+ p× m
+inputing gait cycles for each user.
+Let˜A be the matrix containing magnitude of a gait cycle
+augmented from the cycle Ai, (1≤ i≤ m′). In the beginning,
+˜A is initialized from Ai, ˜A ← Ai. Then, alteration with
+random value is performed on ˜A to make it varying from
+Ai. To maintain the smoothness and preserve the waveform,
+instead of modifying each signal separately, we split ˜A into
+several frames by the signal semantic, then the alteration
+is performed on each frame. Speciﬁcally, in each axis D,
+(D∈{ X, Y, Z}), the gait cycle is split independently, using
+Algorithm 1 Arbitrary Time Deformation
+Input
+•
+{
+t1, t2, ..., tm
+}
+: timestamps of m real gait cycles;
+• p: the number of augmenting cycles per each real cycle;
+Output
+• ˜T : timestamps of m× p augmenting cycles;
+1: ˜T←{}
+2: Compute the time length variance δ2τ by (2)
+3: Compute the averaged number of signals per gait cycle¯n
+by (4)
+4: for each timestamp vector ti do
+5: for l from 1 to p do
+6: ˜t← ti
+7: for j from 2 to ni do
+8: Generate a random value 1t by (6)
+9: for k from j to ni do
+10: Adjust˜tk with1t by (5)
+11: end for
+12: end for
+13: ˜T←˜T∪˜t
+14: end for
+15: end for
+16: return ˜T
+the delimitation points pD determined by
+pD={ j| 2≤ j≤ (ni− 1), (˜aDj−¯aD)(˜aDj+1−¯aD)≤ 0}, (7)
+where˜aDj is the signal j in axis D of cycle ˜A, and¯aD is the
+mean of all signals in ˜A in axis D
+¯aD= 1ni n∑j=1˜aDj . (8)
+Equation (7) means thatpD consists of the positions, at which,
+the value of signal in axis D is changed from below/above
+the mean to above/below the mean. Thus, by the points pD,
+the gait cycle in each axis D is split into several frames,
+so that, each frame consists of consecutive signals which are
+all either above or below the mean.
+Let f denote a frame segmented from ˜A in an axis D.
+We identify the signal j∗ in f having the largest absolute
+magnitude
+j∗= argmax
+j∈[fs, fe]
+|˜aDj|, (9)
+where fs and fe are the beginning and ending points of f. Next,
+we estimate the variance δ2D,j∗ of signal j∗ in axis D over m′
+VOLUME 8, 2020 12369
+L. Tran, D. Choi: Data Augmentation for Inertial Sensor-Based Gait Deep Neural Network
+input cycles,
+δ2D,j∗= 1m′− 1 m′∑i=1 (aDi,j∗−¯aDj∗)2, (10)
+where aDi,j∗ is the signal j∗ of cycle i in D-axis, and¯aDj∗ is the
+mean of signal j∗ in axis D over m′ input cycles
+¯aDj∗= 1m′ m′∑i=1 aDi,j∗. (11)
+Then, a random value 1a is generated according to Gaus-
+sian distribution of mean zero and variance δ2D,j∗, 1a ∼
+N (0,δ 2D,j∗ ). For each signal j in f (fs < j≤ fe), its value
+is adjusted by:
+˜aDj ←˜aDj +1a˜aDj −¯aD˜aDj∗−¯aD. (12)
+Equation (12) means that in each frame f, a random value
+1a is used as the baseline for adjusting all signals in f.
+The fraction
+˜aDj−¯aD
+˜aDj∗−¯aD ensures that, the adjusting amount for
+high-magnitude signal is greater than it for low-magnitude
+signal. By this fraction, the smoothness of signal in based
+cycle is preserved in augmenting cycle.
+We summarize in Algorithm 2 the process of generating
+q× m′ new gait cycles from m′ gait cycles following the SMP
+algorithm, i.e., with each gait cycle Ai, q augmenting cycles
+are produced.
+C. CONVOLUTIONAL NEURAL NETWORK
+In this section, we present the CNN for gait classiﬁcation
+including the shape of input data, the network architecture,
+and the optimization method.
+1) INPUT DATA
+With each user in the dataset, both the real and the augmenting
+gait cycles are used for training the deep network. In total,
+there are m× (1+ p+ q+ p× q) gait cycles of each
+user, in which there are m real cycles, m× p A TD-based
+augmenting cycles, m× q cycles augmented by SMP , and
+m× p× q ones augmented by both. First, all gait cycles
+are normalized to have a ﬁxed number of signals n= 120
+using spline interpolation [38]. Then, with each signal j in a
+gait cycle Ai, we determine its magnitude summation aMi,j=√
+(aXi,j)2+ (aYi,j)2+ (aZi,j)2. Each gait cycle Ai is represented
+by a matrix of size (4 × 120) whose rows are formed by the
+acceleration forces acted on the X , Y , Z , and the magnitude
+summation, respectively. Finally, each component of Ai is
+normalized to zero mean and unit variance over the training
+dataset, as it leads to faster convergence and higher perfor-
+mance [39].
+2) NETWORK ARCHITECTURE
+The proposed CNN architecture for gait identiﬁcation is
+sketched in Figure 4. The network consists of 4 convolu-
+tional layers (Conv) for deep features extraction, and 2 fully
+Algorithm 2 Stochastic Magnitude Perturbation
+Input
+• m′ gait cycles{A1, A2, ... Am′};
+• q: the number of augmenting cycles per each real cycle;
+Output
+• ˜A: a set of q× m′ augmented gait cycles;
+1: ˜A←{}
+2: for each cycle Ai do
+3: for k from 1 to q do
+4: ˜A← Ai
+5: for each axis D∈{ X, Y, Z} do
+6: Identify the frame delimitation points pD by (7)
+7: Segment˜A in D-axis into frames using pD
+8: for each frame f do
+9: Determine the signal j∗ having highest absolute
+magnitude by (9)
+10: Estimate the variance δ2D,j∗ of signal j∗ in axis
+D by (10)
+11: Generate a random1a by1a← N (0,δ 2D,j∗ )
+12: for each signal˜aDj in f do
+13: Adjust value of signal˜aDj by (12).
+14: end for
+15: end for
+16: end for
+17: ˜A← ˜A∪˜A
+18: end for
+19: end for
+20: return ˜A
+connected layers (FC) for classiﬁcation. The network accepts
+the gait cycle expressed by a (4× 120) matrix Ai as the input,
+and outputs a vector
+ˆyi=[ˆyi,1ˆyi,2 ... ˆyi,Nu], (13)
+where Nu is the number of users in the dataset, and ˆyi,j
+(1≤ j≤ Nu) represents the predicted probability of cycle
+Ai belongs to the user j. Detailed computation of each layer
+is explained as follows.
+• Conv1. Given a gait cycle Ai, the Conv1 performs
+one-dimensional convolution using 32 ﬁlters of size
+(1× 6), and uses the rectiﬁed linear unit (ReLU) as the
+activator, to get the output of size (32@4× 115). By the
+one-dimensional convolution, this layer uses ﬁltering on
+each dimension of the input data separately, and does not
+consider the correlation among different dimensions.
+12370 VOLUME 8, 2020
+L. Tran, D. Choi: Data Augmentation for Inertial Sensor-Based Gait Deep Neural Network
+FIGURE 4. The architecture of deep convolutional neural network for gait identification.
+• Conv2: The second Conv layer performs two-
+dimensional convolution with 48 ﬁlters of size (3 × 6),
+activated by the ReLU unit. By these ﬁlters, the corre-
+lation information between data in different dimensions
+is detected and captured automatically. Then, the max-
+pooling of size (2×3) is used to obtain the output of size
+(48@2× 38).
+• Conv3: The third Conv layer creates a fusion of the data
+in two dimensions to get a one-dimensional vector using
+64 ﬁlters of size (2 × 6), activated by the ReLU unit.
+Then, the max-pooling of size (1× 3) is used to reduce
+the data size to (64@1× 11).
+• Conv4: The last Conv layer performs convolution with
+96 ﬁlters of size (1 × 3) as the ﬁnal ﬁltering to get an
+output of size (96@1× 9). The ReLU unit is also used
+as the activator. Then, the output is ﬂattened into a vector
+of size 864, which is represented by 864 neuron nodes.
+• FC1: The ﬁrst FC layer computes Nf outputs from 864
+inputs, in which, each output is a linear combination
+of all the input nodes, and activated by the Hyperbolic
+tangent function. All the output nodes form a vector
+fi=
+[fi,1 fi,2 ... fi,Nf] (14)
+whose elements are used as the hidden features of the
+gait cycle Ai extracted by CNN.
+• FC2: The second FC layer acts as a classiﬁer, which
+uses fi to predict the user identity. For a model of Nu
+users, this layer outputs a vectorˆyi of size Nu, where each
+componentˆyi,j is computed from all the input nodes,
+activated by the log softmax function.
+In this network, Nf is determined according to the number
+of participated users Nu as Nf = 32 Nu. In overall, a better
+performance can be achieved by increasing Nf , however, too
+large Nf could cause the curse of dimensionality. In this paper,
+we select an optimal value for Nf . Detailed analysis of Nf on
+the classiﬁcation performance is presented in [10].
+3) NETWORK OPTIMIZATION
+The network parameters are initialized randomly, then
+updated iteratively through the supervised training process
+using the stochastic gradient descent algorithm. Speciﬁcally,
+let L be the set of gait cycles for training the model. Each gait
+cycle Ai∈ L is labeled with the identity of its owner user ui
+(1≤ ui≤ Nu). The training process is repeated by a number
+of epochs. In each epoch, a set B⊂ L including B gait cycles
+are selected, where B is the batch size. All gait cycles in B
+are input to the network to obtain a set of B output vectors
+ˆyi (13), (1≤ i≤ B). The loss over the batch B is computed
+using the negative log-likelihood (NLL) function
+L=− 1B B∑i=1 log(ˆyi,ui). (15)
+The loss L is used to update the network parameters through
+the back-propagation procedure. The process is repeated to
+minimize L iteratively by rotating the gait cycles in B until
+it spans entire L. When all gait cycles in L have been used,
+the training process for one epoch completes. Then, entire
+process is repeated with a new epoch until the stopping
+criterion is met (see Section IV -A).
+IV. EVALUATION
+In this section, we present the experiment and evaluating
+result of the proposed model. First, we describe the datasets
+and experimental procedure. Then, the results of identiﬁca-
+tion and veriﬁcation tasks are reported along with the detailed
+analysis in each task. Finally, we give a relative comparison
+between our study and state-of-the-art researches.
+A. DATASET AND EXPERIMENT PROCEDURE
+We evaluated our model using 2 datasets, the realistic and
+the largest one, respectively published by Chonnam National
+University and Osaka University.
+1) CHONNAM NATIONAL UNIVERSITY DATASET
+The Chonnam National University dataset (CNU) [20] com-
+prises of acceleration and orientation gait signals of 38 volun-
+teers (10 females and 28 males), acquired by Google Nexus
+One. Each volunteer conducted 19 walking sessions on aver-
+age, each session was performed on a different day during a
+long-time period, and under unconstrained outside conditions
+(e.g., clothes, foot gears, road surfaces). Thus, this dataset is
+considered as the most realistic one. By it, we aim to conﬁrm
+our methods on real conditions.
+Using the preprocessing methods described in
+Section III-A, we processed the raw gait signals and seg-
+mented to gait cycles. There were 21427 extracted gait cycles
+VOLUME 8, 2020 12371
+L. Tran, D. Choi: Data Augmentation for Inertial Sensor-Based Gait Deep Neural Network
+of all users. The extracted gait cycles were divided into
+3 parts. The ﬁrst one, denoted as L, was formed by randomly
+selecting m gait cycles of each user, and was used for training
+the model. From the remaining data, 50% gait cycles of each
+user were selected randomly to make the validation datasetV.
+All other gait cycles formed the testing dataset T .
+In the training phase, gait cycles in L were augmented to
+generate more training data using the proposed augmentation
+algorithms (section III-B). The set V were used to termi-
+nate the training process. Speciﬁcally, when one epoch was
+completed, the loss on validation set V was computed. If the
+loss on V did not decrease during 15 consecutive epochs,
+the training process was terminated and all parameters of the
+network were ﬁxed for testing. In the testing phase, each gait
+cycle in T was input to the trained model to get the predicted
+user identity. The identiﬁcation accuracy is computed by
+ACC= 100× Nc
+|T| , (16)
+where Nc is the correct classifying cases, and |T| is the
+number of gait cycles in the testing set T .
+To provide a detailed analysis on the impact of the aug-
+mentation algorithms, we conducted the above experiment
+with different numbers of augmenting gait cycles ( i.e., p, q),
+performed on different amount of training gait cycles (i.e., m).
+Each case was repeated 10 times and the averaged accuracy
+was reported.
+2) OSAKA UNIVERSITY GAIT DATASET
+The Osaka University inertial sensor-based gait dataset
+(OU-ISIR) [22] is considered as the largest published iner-
+tial sensor-based gait dataset, which consists of two sub-
+datasets. The ﬁrst one contains gait signals of 744 users
+(each user performed two level-walk sequences), captured
+by the acceleration and gyroscope sensors of an IMU unit
+placing in the center of the back waist. The second sub-dataset
+comprises data of 495 subjects, each one walked 4 sequences
+including 2 level-walk, one up-slope, and one down-slope,
+collected using 3 IMU units placing in the left, right and
+center of the back waist, respectively. By this dataset, we aim
+to analyze our model on a large number of users, thus, the ﬁrst
+sub-dataset was used to maximize the number of users.
+Using the method summarized in Section III-A, we also
+preprocessed and extracted the gait cycles from the raw gait
+signals. However, for this dataset, the disorientation elimi-
+nation step was skipped as the coordination of devices was
+ﬁxed during the time of acquiring data [22]. Totally, there
+were 13023 gait cycles extracted. 8 gait cycles of each user
+were used to construct the training dataset L; 50% of the
+remaining gait cycles formed the validation dataset V, and
+all the rest gait cycles were used for testing. A TD and SMP
+algorithms were also adopted on L to get more training data.
+However, this dataset does not contain the timestamp of gait
+signal, which is needed for the A TD algorithm. To overcome
+this issue, with each gait cycle i, we approximately assigned
+the timestamp of each signal as ti,j = 10× (j− 1) ms,
+1≤ j≤ ni. This means, in each gait cycle, the timestamp
+of ﬁrst signal is ti,0= 0, and the timestamp of each signal
+after that is gradually increased by 10 ms. The reason for this
+approximation is the device sampled signals at the frequency
+of 100 Hz when collecting this dataset. Thus, the averaged
+time gap between two consecutive signals is 10 ms.
+For this dataset, different settings of p and q were also
+evaluated. However, as each user just performed two short
+walking sequences, the number of gait cycles per each user
+in this dataset is limited, which is 17 on average. Thus, all
+experiments were conducted with m= 8.
+B. VISUALIZATION OF THE AUGMENTING GAIT CYCLE
+First, we provide a visualization of the augmenting gait cycles
+to conﬁrm that the proposed algorithms could generate new
+gait cycles with the desired properties. Figures 5 and 6 plot
+2 gait cycles randomly selected in CNU and OU-ISIR datasets
+along with their augmenting cycles, respectively.
+We could see that, when using the A TD algorithm
+(Figures 5a, 6a), the magnitude of gait signal is preserved in
+the augmenting cycles. And, the acting time of each signal
+ﬂuctuates arbitrarily. On the other hand, for the gait cycles
+generated from the SMP algorithm (Figures 5a, 6a), the acting
+time of each signal is preserved, and the magnitude varies
+randomly in the augmenting cycles. Finally, by combining
+the impact of A TD and SMP , the generated gait cycles vary in
+both magnitude and time (Figures 5c, 6c), and the augmenting
+gait cycles vary more naturally as had been acquired in real
+condition. In all cases, the augmenting gait cycles still main-
+tain the waveform of their based cycle, and they still represent
+a same user identity in the vision manner.
+C. IDENTIFICATION PERFORMANCE
+1) CNU DATASET
+The effectiveness of our proposed augmentation algorithms
+on the CNU dataset is illustrated in Figure 7, which provides
+the identiﬁcation performance under different amounts of
+augmenting and training data.
+First, we provide in Figures 7a and 7b the accuracy com-
+parison between adopting A TD or SMP alone and no data
+augmentation, under different amount of real training data
+(i.e., from 10 to 60 gait cycles). As we can see, A TD and
+SMP clearly improve the identiﬁcation accuracy, and their
+efﬁciency depends on the number of training gait cycles
+m and the augmenting gait cycles p, q. When having little
+training data, the amount of increasing accuracy by applying
+data augmentation is higher than that of having much training
+data. For instance, with m= 10 and no data augmentation,
+the model achieved the ACC of 80 .39 %. By using A TD
+augmentation with p= 1, the ACC was increased to 83.01 %,
+thus the gained ACC for this case was 2 .61 %. When m
+was increased to 60, the gained ACC gradually decreased
+to 0.78 %. Similarly, when adopting SMP with p= 1 and
+m= 10, the gained ACC was 0.99 %, which was reduced to
+0.85% when m was increased to 60.
+12372 VOLUME 8, 2020
+L. Tran, D. Choi: Data Augmentation for Inertial Sensor-Based Gait Deep Neural Network
+FIGURE 5. The augmenting gait cycles in time, magnitude and both, of a randomly selected cycle in CNU dataset, generated from ATD, SMP and their
+combination, respectively.
+FIGURE 6. The augmenting gait cycles in time, magnitude and both, of a randomly selected cycle in OU-ISIR dataset, generated from ATD, SMP and
+their combination, respectively.
+Besides, the effectiveness of augmenting algorithms is
+impacted by the amount of augmenting cycles. For both A TD
+and SMP , increasing the number of augmenting gait cycles
+to 2 and 3 could further improve the accuracy. For instance,
+with m= 10, when using A TD algorithm with p= 2 and
+p= 3, the accuracy was 84.04% and 84.84 %, respectively.
+In a same way, by increasing q to 2 and 3 when adopting
+SMP algorithm, the ACC was raised to 82.82% and 83.44 %,
+respectively. A similar impact could be observed with other
+values of m. However, further increasing the number of
+VOLUME 8, 2020 12373
+L. Tran, D. Choi: Data Augmentation for Inertial Sensor-Based Gait Deep Neural Network
+FIGURE 7. The identification ACC (%) measured by CNU dataset, under different settings of augmenting gait cycles, where p = 0, q = 0, and
+p = q = 0 mean no data augmentation.
+augmenting cycles beyond 3 just resulted in minor improving
+the ACC, or sometimes degrading. The reason for this fact is,
+with a large number of augmenting cycles, the redundant data
+could exist and causes inefﬁcient learning. Thus, we suggest
+that the appropriate number of augmenting gait cycles should
+be 2 or 3 when adopting A TD or SMP separately.
+With the combination of A TD and SMP , the augment-
+ing gait cycle varies from each other more naturally (see
+Section IV -B). So, as we expected, it resulted in much
+higher accuracy comparing to using each algorithm sepa-
+rately, as displayed in Figure 7c. For instance, when using
+m= 10 training gait cycles, combining A TD and SMP with
+p= q= 1 and p= q= 2 could increase the ACC from
+80.39% to 85.44% and 88.93 %, respectively. When m= 60,
+the ACC was boosted from 92.3% to 94.04% and 96.24% for
+the case of p= q= 1 and p= q= 2, respectively. Similar
+to using A TD or SMP alone, over-increasing p and q causes
+generating redundant augmenting gait cycles and degrading
+the ACC. In addition, by combining the A TD and SMP algo-
+rithms, the number of augmenting gait cycles is increased
+multiplicatively when increasing p and q. For instance, with
+p= q= 1, there are 3 augmenting gait cycles for each real
+cycle. And, with p= q= 2 and p= q= 3, the number
+of augmenting gait cycles respectively are 8 and 15 for each
+real cycle. So, when using A TD and SMP at the same time,
+we recommend using p= q= 1 or p= q= 2 to avoid
+generating redundant augmenting gait cycles.
+Note that, when combining A TD and SMP ,p and q can be
+different (e.g., p= 1 and q= 3; p= 3 and q= 1). However,
+such settings will lead to a large number of time-based or
+magnitude-based augmenting gait cycles. Then, the ACC will
+be degraded as we just showed above. Thus, we recommend
+that p and q should be equal to get optimal performance.
+2) OU-ISIR DATASET
+Table 1 summarizes the identiﬁcation performance measured
+on OU-ISIR dataset when training with 8 gait cycles per
+each user, under different settings of data augmentation.
+TABLE 1. The identification ACC ( %) when adopting different settings of
+data augmentation on 8 real gait cycles per each user, measured on
+OU-ISIR dataset.
+We could see that the proposed augmentation algorithms are
+also effective for dataset having a large number of subject as
+OU-ISIR. When there was no data augmentation, the iden-
+tiﬁcation ACC was 82 .53 %. By using A TD with p = 1
+and p= 2, the ACC was improved to 84 .91% and 87.22 %,
+respectively. Similarly, adopting SMP alone could boost the
+performance to 84.71% and 87.44% for q= 1 and q= 2,
+respectively. The best ACC experimented in OU-ISIR, was
+89.99 %, achieved by combining A TD and SMP with p=
+q= 2. For this dataset, we observed a same inference as it was
+with CNU dataset. That is, too much augmenting data could
+lead to redundant training cycles and make the performance
+degrading. The number of augmenting gait cycles per each
+real cycle (i.e., p, q) should not exceed 2.
+D. VERIFICATION PERFORMANCE
+In this section, we extend the identiﬁcation model (Figure 4)
+to construct a veriﬁcation model using transfer learning and
+one-class support vector machine (OCSVM) [31]. The perfor-
+mance evaluating on CNU and OU-ISIR datasets is reported
+to conﬁrm the effectiveness on veriﬁcation task.
+1) OCSVM-BASED VERIFICATION MODEL
+It is well-known that, a deep network, which has been trained
+for a speciﬁc task ( e.g., identiﬁcation), can be transferred to
+12374 VOLUME 8, 2020
+L. Tran, D. Choi: Data Augmentation for Inertial Sensor-Based Gait Deep Neural Network
+FIGURE 8. The ROC curves of the verification performance under different data augmentation settings, using 60 training gait cycles, measured by CNU
+dataset.
+use in a related task ( e.g., veriﬁcation) [40]. A trained CNN
+network can be used as a universal feature extraction tool,
+which automatically extracts good features, even for subjects
+that have not leaned before [41].
+Following that approach, we construct a veriﬁcation model
+as follows. First, we train the CNN network (Figure 4) with
+the perspective of identiﬁcation as described in Section III-
+C.3. At this step, the A TD and SMP algorithms are also
+adopted to generate more training data. Upon the training is
+completed, we discard the FC2 layer, and use the remaining
+network as a generic feature extraction tool which outputs a
+feature vector fi (14) when inputing a gait cycle Ai. Then,
+the extracted vectors fi are used as the input of OCSVM to
+build a veriﬁcation model.
+For the veriﬁcation model of a user u, OCSVM uses a
+set of feature vectors fi belong to u to learn a boundary
+which covers all fi and separates them from those of other
+users. By OCSVM, a classiﬁer is trained using only the data
+of positive class ( i.e., user u), but can handle the impostors
+whose data have not given in the training stage [31]. The
+main strategy of OCSVM is to map the input data to an
+appropriate space corresponding to the kernel, then build a
+hyperplane to separate them from the origin with maximum
+margin.
+At the run time stage, a testing gait cycle A′ is input to the
+network to get a feature vectorf′. The learned OCSVM model
+receives f′ and returns a score g(f′) which reﬂects the position
+of f′ in relation to the boundary. A positive g(f′) means that f′
+is inside the boundary, zero indicates f′ lies on the boundary,
+and outside otherwise. Thus, when g(f′)≥ 0, A′ is classiﬁed
+as positive class, and negative if g(f′) < 0. We use false
+acceptance rate (FAR), false rejection rate (FRR) and equal
+error rate (EER) to measure the veriﬁcation performance. The
+FRR is computed as the percentage of positive cases but are
+classiﬁed as negative, while the FAR is determined by the
+percentage of negative cases but the model results to positive.
+To provide a trade-off between FAR and FRR, we adopt
+an additional parameter θ , which plays as a ﬂexible thresh-
+old to determine positive or negative. Speciﬁcally, given
+TABLE 2. The verification EER (%) when using 60 gait cycles for training,
+under different numbers of augmenting gait cycles, measured on CNU
+dataset.
+a speciﬁc θ , A′ is classiﬁed as positive if g(f′) ≥ θ , and
+negative if g(f′) < θ. The equal error rate (EER) is deter-
+mined as the average of FAR and FRR corresponding to a
+speciﬁc threshold θ , at which, FAR and FRR are equivalent
+or approximate to each other.
+2) CNU DATASET
+Figure 8 displays the veriﬁcation performance ROC curves
+measured in CNU dataset, under different settings of data
+augmentation when using 60 real gait cycles for training, and
+Table 2 provides the EER for each case. Speciﬁcally, the EER
+when using no data augmentation was 3 .07 %. By adopting
+A TD alone with p= 1, p= 2 and p= 3, the EER was
+reduced to 2.63 %, 2.35% and 2.15 %, respectively. For SMP ,
+a similar effect could be observed. Using SMP along withq=
+1, q= 2, and q= 3 could reduce the EER to 2.52 %, 2.14%
+and 1.91 %, respectively. After all, as expected, the highest
+performance (lowest EER) was achieved as 1 .62% by com-
+bining A TD and SMP with p= q= 2.
+3) OU-ISIR DATASET
+Figure 9 displays the ROC curve of FAR and FRR measured
+on OU-ISIR dataset when using 8 real gait cycles of each user
+for training, under different conﬁgurations of data augmenta-
+tion. Table 3 summarizes those results by providing the EER
+VOLUME 8, 2020 12375
+L. Tran, D. Choi: Data Augmentation for Inertial Sensor-Based Gait Deep Neural Network
+FIGURE 9. The verification EER (%) when using 8 gait cycles for training, under different numbers of augmenting gait cycles, measured on OU-ISIR
+dataset.
+TABLE 3. The verification EER (%) measured on OU-ISIR dataset, when
+training with 8 gait cycles, and using different numbers of augmenting
+gait cycles.
+for each case. By these results, we show that the proposed data
+augmentation algorithms are also effective for the task of user
+veriﬁcation, under a large number of subjects. Speciﬁcally,
+without data augmentation, the model achieved the EER of
+7.58 %. The use of A TD algorithm with p= 3 could reduce
+it to 5.21 %. Similarly, by using SMP with q= 2, the EER
+was decreased to 5.14 %. Again, the best performance exper-
+imented in this dataset was 4 .49 %, achieved by combining
+A TD and SMP withp= q= 2.
+E. STATE-OF-THE-ART RESEARCH COMPARISON
+In this section, we provide a comparison between our study
+and state-of-the-art researches which experimented on CNU
+and OU-ISIR datasets. It is very difﬁcult to provide a fair
+comparison as the experimental evaluation of each research
+was conducted in different settings ( e.g., the portion of train-
+ing data, the potion of data for each testing trial, the number
+of users). As the classiﬁcation performances (e.g., FAR, FRR,
+EER) are strongly affected by these factors [7], the com-
+parison is just relative. We summarize in Table 4 not only
+classiﬁcation performances but also other settings, to provide
+a comparison as fairly as possible, where the cell with ‘ −’
+means the corresponding factor was not given.
+On the CNU dataset, our study clearly out-performs the
+state-of-the-art research [20] in all aspects. Speciﬁcally,
+in their research, they used 50% of data for training, and 4 gait
+cycles for each time of testing. They achieved 94 .93% ACC
+for identiﬁcation task and 5 .35% EER for veriﬁcation task.
+By data augmentation, we could use smaller potion of data
+for training as 23% dataset. However, our trained model is
+more robust as it achieves higher performance ( i.e., 96.24%
+ACC and 1.62% EER) while using shorter data sequences for
+each testing trial ( i.e., 1 gait cycle).
+The OU-ISIR dataset has been used for experimental eval-
+uation on many researches. In the early time, Zhong et al.,
+2014 [42] constructed the gait dynamic images (GDIs),
+which is invariant to sensor orientation, for the task of
+user veriﬁcation. The EER of 5 .6% was reported when
+using 50% of data for training and one walking ses-
+sion (9m long) for each time of testing. The studies
+after that gradually improved the classiﬁcation performance
+overtime [6], [14]–[16], [36], [43]. A recent research by Del-
+gado et al. [14] reported a high-performance model in both
+the task of veriﬁcation and identiﬁcation ( i.e., 94.8 % ACC
+and 1.1% EER) with the use of CNN on multi-sensor and
+multi-task learning. On the other hand, Fernandez et al. [16]
+conducted a ﬁrst approach with RNN and achieved the EER
+of 7.55% when using 80% of data for training and 1 cycles
+for each testing trial. To the best of our knowledge, [16]
+is also the only research that adopts RNN to the task of
+inertial sensor-based gait recognition. Usually, the classi-
+ﬁcation performance is greatly impacted by the potion of
+training data and the amount of data used for each testing
+trial. A larger potion data for training usually results in a more
+robust classiﬁer, while a longer sequence of data for testing
+provides more stable and sufﬁcient information to get higher
+prediction accuracy.
+We can see that our model out-performs all other methods
+while using smaller potion of training and each testing trial,
+excepting the studies [14], [36]. The reported ACC in [36] is
+96.84 %, which is higher than our identiﬁcation performance
+as 89.99 %. However, in [36], the authors just used 100 users
+selected randomly among 744 users for experiment, while
+12376 VOLUME 8, 2020
+L. Tran, D. Choi: Data Augmentation for Inertial Sensor-Based Gait Deep Neural Network
+TABLE 4. The comparison on different factors ( e.g., dataset, performance, training/testing data potion) between state-of-the-art gait recognition
+researches.
+it has been showed that, larger participated subject would
+reduce the classiﬁcation performance [7], [22]. Similarly,
+in the study [14], beside the robust of their proposed method,
+the high performance has the contribution of long testing data
+sequence ( i.e., 9m long) and the fusion of multiple sensors
+(i.e., gyroscope and accelerometer). For this study, we focus
+on designing a gait data-based augmentation algorithms.
+Thus, we only use the accelerometer. In addition, we used
+a short sequence data as 1 gait cycle for each testing trial. We
+strongly believe that, incorporating the gyroscope data and
+increasing the training/testing data amount could increase the
+performance as indicating in prior studies [7], [16].
+V. CONCLUSION
+In this study, we proposed a novel approach for inertial
+sensor-based gait data augmentation. First, two algorithms
+as A TD and SMP were proposed, to create random varia-
+tion in the time and magnitude domain, respectively. They
+were designed to arbitrarily adjust the real gait data for
+making variation, while preserving the critical information
+of real data in augmenting data. A generic deep CNN gait
+model was designed for user identiﬁcation task, in which,
+the A TD and SMP algorithms were coordinated effectively.
+Then, a veriﬁcation model was constructed by extending the
+identiﬁcation model using transfer learning and OCSVM.
+We analyzed A TD, SMP and the proposed models using
+the realistic and the largest gait dataset ( i.e., CNU dataset
+and OU-ISIR dataset, respectively). The experiment results
+show that the combination of A TD and SMP could generate
+augmenting data varying naturally as real data. And by their
+help, the veriﬁcation and identiﬁcation performances were
+effectively improved. In addition, the proposed algorithms
+could operate on various sensor models, which could be
+widely employed for data augmentation in future deep gait
+models.
+REFERENCES
+[1] L. Lee and W. Grimson, ‘‘Gait analysis for recognition and classiﬁcation,’’
+in Proc. 5th IEEE Int. Conf. Autom. Face Gesture Recognit. , Jun. 2003,
+pp. 155–162.
+[2] D. Tao, X. Li, X. Wu, and S. J. Maybank, ‘‘General tensor discriminant
+analysis and Gabor features for gait recognition,’’ IEEE Trans. Pattern
+Anal. Mach. Intell., vol. 29, no. 10, pp. 1700–1715, Oct. 2007.
+[3] L. Middleton, A. Buss, A. Bazin, and M. Nixon, ‘‘A ﬂoor sensor system
+for gait recognition,’’ in Proc. 4th IEEE Workshop Autom. Identiﬁcat. Adv.
+Technol. (AutoID), Oct. 2006, pp. 171–176.
+[4] T. C. Pataky, T. Mu, K. Bosch, D. Rosenbaum, and J. Y . Goulermas, ‘‘Gait
+recognition: Highly unique dynamic plantar pressure patterns among 104
+individuals,’’J. Roy. Soc. Interface, vol. 9, no. 69, pp. 790–800, Apr. 2012.
+[5] H. J. Ailisto, M. Lindholm, J. Mantyjarvi, E. Vildjiounaite, and
+S.-M. Makela, ‘‘Identifying people from gait pattern with accelerometers,’’
+Proc. SPIE, vol. 5779, pp. 7–14, Mar. 2005.
+[6] S. Sprager and M. B. Juric, ‘‘An efﬁcient HOS-based gait authentication
+of accelerometer data,’’ IEEE Trans. Inf. F orensics Security, vol. 10, no. 7,
+pp. 1486–1498, Jul. 2015.
+[7] S. Sprager and M. Juric, ‘‘Inertial sensor-based gait recognition: A review,’’
+Sensors, vol. 15, no. 9, pp. 22089–22127, Sep. 2015.
+[8] L. Tran, T. Hoang, T. Nguyen, and D. Choi, ‘‘Improving gait cryptosys-
+tem security using Gray code quantization and linear discriminant anal-
+ysis,’’ in Proc. Int. Conf. Inf. Secur . Cham, Switzerland: Springer, 2017,
+pp. 214–229.
+[9] G. Giorgi, F. Martinelli, A. Saracino, and M. Sheikhalishahi, ‘‘Try walking
+in my shoes, if you can: Accurate gait recognition through deep learning,’’
+in Proc. Int. Conf. Comput. Saf., Rel., Secur .Cham, Switzerland: Springer,
+2017, pp. 384–395.
+[10] M. Gadaleta and M. Rossi, ‘‘IDNet: Smartphone-based gait recognition
+with convolutional neural networks,’’Pattern Recognit., vol. 74, pp. 25–37,
+Feb. 2018.
+[11] O. Dehzangi, M. Taherisadr, and R. Changalvala, ‘‘IMU-based gait recog-
+nition using convolutional neural networks and multi-sensor fusion,’’ Sen-
+sors, vol. 17, no. 12, p. 2735, Nov. 2017.
+VOLUME 8, 2020 12377
+L. Tran, D. Choi: Data Augmentation for Inertial Sensor-Based Gait Deep Neural Network
+[12] Y . Zhao and S. Zhou, ‘‘Wearable device-based gait recognition using angle
+embedded gait dynamic images and a convolutional neural network,’’
+Sensors, vol. 17, no. 3, p. 478, Feb. 2017.
+[13] C. Wan, L. Wang, and V . V . Phoha, ‘‘A survey on gait recognition,’’ ACM
+Comput. Surv., vol. 51, no. 5, p. 89, 2019.
+[14] R. Delgado-Escano, F. M. Castro, J. R. Cozar, M. J. Marin-Jimenez, and
+N. Guil, ‘‘An end-to-end multi-task and fusion CNN for inertial-based gait
+recognition,’’ IEEE Access, vol. 7, pp. 1897–1908, 2019.
+[15] R. Subramanian and S. Sarkar, ‘‘Evaluation of algorithms for orientation
+invariant inertial gait matching,’’ IEEE Trans. Inf. F orensics Security ,
+vol. 14, no. 2, pp. 304–318, Feb. 2019.
+[16] P . Fernandez-Lopez, J. Liu-Jimenez, K. Kiyokawa, Y . Wu, and
+R. Sanchez-Reillo, ‘‘Recurrent neural network for inertial gait user
+recognition in smartphones,’’ Sensors, vol. 19, no. 18, p. 4054, Sep. 2019.
+[17] A. Halevy, P . Norvig, and F. Pereira, ‘‘The unreasonable effectiveness of
+data,’’ IEEE Intell. Syst., vol. 24, no. 2, pp. 8–12, Mar. 2009.
+[18] M. Oquab, L. Bottou, I. Laptev, and J. Sivic, ‘‘Learning and trans-
+ferring mid-level image representations using convolutional neural net-
+works,’’ in Proc. IEEE Conf. Comput. Vis. Pattern Recognit. , Jun. 2014,
+pp. 1717–1724.
+[19] J. Frank, S. Mannor, and D. Precup. (2010). Data Sets: Mobile
+Phone Gait Recognition Data . [Online]. Available: http://www.cs.mcgill.
+ca/~jfrank8/data/gait-dataset.html
+[20] T. Hoang, D. Choi, and T. Nguyen, ‘‘On the instability of sensor orientation
+in gait veriﬁcation on mobile phone,’’ in Proc. 12th Int. Conf. Secur .
+Cryptogr ., vol. 4, 2015, pp. 148–159.
+[21] M. Muaaz and C. Nickel, ‘‘Inﬂuence of different walking speeds and
+surfaces on accelerometer-based biometric gait recognition,’’ inProc. 35th
+Int. Conf. Telecommun. Signal Process. (TSP), Jul. 2012, pp. 508–512.
+[22] T. T. Ngo, Y . Makihara, H. Nagahara, Y . Mukaigawa, and Y . Y agi,
+‘‘The largest inertial sensor-based gait database and performance evalu-
+ation of gait-based personal authentication,’’ Pattern Recognit., vol. 47,
+no. 1, pp. 228–237, Jan. 2014.
+[23] Y . Lecun, L. Bottou, Y . Bengio, and P . Haffner, ‘‘Gradient-based learn-
+ing applied to document recognition,’’ Proc. IEEE , vol. 86, no. 11,
+pp. 2278–2324, Nov. 1998.
+[24] C. Shorten and T. M. Khoshgoftaar, ‘‘A survey on image data augmentation
+for deep learning,’’ J. Big Data, vol. 6, no. 1, p. 60, 2019.
+[25] C. Sun, A. Shrivastava, S. Singh, and A. Gupta, ‘‘Revisiting unreasonable
+effectiveness of data in deep learning era,’’ in Proc. IEEE Int. Conf.
+Comput. Vis. (ICCV), Oct. 2017, pp. 843–852.
+[26] J. Wang and L. Perez, ‘‘The effectiveness of data augmentation in image
+classiﬁcation using deep learning,’’ Convolutional Neural Netw. Vis.
+Recognit., Dec. 2017.
+[27] C. N. V asconcelos and B. N. V asconcelos, ‘‘Convolutional neural net-
+work committees for melanoma classiﬁcation with classical and expert
+knowledge based image transforms data augmentation,’’ vol. 1, 2017,
+arXiv:1702.07025. [Online]. Available: https://arxiv.org/abs/1702.07025
+[28] N. Jaitly and G. E. Hinton, ‘‘V ocal tract length perturbation (VTLP)
+improves speech recognition,’’ in Proc. Workshop Deep Learn. Audio,
+Speech Lang. (ICML), vol. 117, 2013.
+[29] X. Cui, V . Goel, and B. Kingsbury, ‘‘Data augmentation for deep neural
+network acoustic modeling,’’ IEEE/ACM Trans. Audio Speech Lang. Pro-
+cess., vol. 23, no. 9, pp. 1469–1477, Sep. 2015.
+[30] Z. Tüske, P . Golik, D. Nolden, R. Schlüter, and H. Ney, ‘‘Data augmen-
+tation, feature combination, and multilingual neural networks to improve
+ASR and KWS performance for low-resource languages,’’ in Proc. 15th
+Annu. Conf. Int. Speech Commun. Assoc. , 2014.
+[31] B. Schölkopf, R. C. Williamson, A. J. Smola, J. Shawe-Taylor, and
+J. C. Platt, ‘‘Support vector method for novelty detection,’’ in Proc. Adv.
+Neural Inf. Process. Syst., 2000, pp. 582–588.
+[32] M. P . Murray, A. B. Drought, and R. C. Kory, ‘‘Walking patterns of normal
+men,’’ J. Bone Joint Surg., vol. 46, no. 2, pp. 335–360, 1964.
+[33] M. P . Murray, ‘‘Gait as a total pattern of movement: Including a bibli-
+ography on gait,’’ Amer . J. Phys. Med. Rehabil. , vol. 46, pp. 290–333,
+Feb. 1967.
+[34] O. Incel, ‘‘Analysis of movement, orientation and rotation-based sens-
+ing for phone placement recognition,’’ Sensors, vol. 15, no. 10,
+pp. 25474–25506, Oct. 2015.
+[35] Y . LeCun, Y . Bengio, and G. Hinton, ‘‘Deep learning,’’ Nature, vol. 521,
+no. 7553, p. 436, 2015.
+[36] K.-T. Nguyen, T.-L. V o-Tran, D.-T. Dinh, and M.-T. Tran, ‘‘Gait recogni-
+tion with multi-region size convolutional neural network for authentication
+with wearable sensors,’’ in Proc. Int. Conf. Future Data Secur . Eng.Cham,
+Switzerland: Springer, 2017, pp. 197–212.
+[37] I. Daubechies, ‘‘Orthonormal bases of compactly supported wavelets,’’
+Commun. Pure Appl. Math. , vol. 41, no. 7, pp. 909–996, 1988.
+[38] F. N. Fritsch and R. E. Carlson, ‘‘Monotone piecewise cubic interpolation,’’
+SIAM J. Numer . Anal., vol. 17, no. 2, pp. 238–246, Apr. 1980.
+[39] Y . A. LeCun, L. Bottou, G. B. Orr, and K.-R. Müller, ‘‘Efﬁcient backprop,’’
+in Neural Networks: Tricks of the Trade. Berlin, Germany: Springer, 2012,
+pp. 9–48.
+[40] A. S. Razavian, H. Azizpour, J. Sullivan, and S. Carlsson, ‘‘CNN features
+off-the-shelf: An astounding baseline for recognition,’’ inProc. IEEE Conf.
+Comput. Vis. Pattern Recognit. Workshops, Jun. 2014, pp. 806–813.
+[41] J. Donahue, Y . Jia, O. Vinyals, J. Hoffman, N. Zhang, E. Tzeng, and
+T. Darrell, ‘‘Decaf: A deep convolutional activation feature for generic
+visual recognition,’’ in Proc. Int. Conf. Mach. Learn. , 2014, pp. 647–655.
+[42] Y . Zhong and Y . Deng, ‘‘Sensor orientation invariant mobile gait biomet-
+rics,’’ in Proc. IEEE Int. Joint Conf. Biometrics , 2014, pp. 1–8.
+[43] Z. Wei, W. Qinghui, D. Muqing, and L. Yiqi, ‘‘A new inertial sensor-based
+gait recognition method via deterministic learning,’’ in Proc. 34th Chin.
+Control Conf. (CCC), Jul. 2015, pp. 3908–3913.
+LAM TRAN received the B.S. degree in computer
+science from the Ho Chi Minh University of Sci-
+ence, Ho Chi Minh, Vietnam, in September, 2012,
+and the M.E. degree in computer science from
+Chonnam National University, Gwangju, South
+Korea, in August, 2017. He is currently pursuing
+the Ph.D. degree with the Electronics and Com-
+puter Department, Chonnam National University,
+South Korea. He is also a Lecturer with the Infor-
+mation Technology Faculty, Ho Chi Minh Univer-
+sity of Science. His research interests currently focus on inertial sensor-based
+gait biometrics, privacy enhancing for biometric systems, and mobile
+security.
+DEOKJAI CHOI received the B.S. degree from
+the Department of Computer Engineering, Seoul
+National University, in 1982, the M.S. degree
+from the Department of Computer Science,
+KAIST, South Korea, in 1984, and the Ph.D.
+degree from the Department of Computer Sci-
+ence and Telecommunications, University of
+Missouri-Kansas City, USA, in 1995. He is cur-
+rently a Full Professor with the School of Electron-
+ics and Computer Engineering, Chonnam National
+University, South Korea. His interests on research are mobile security, human
+activity proﬁle, biometric authentication, and network security.
+12378 VOLUME 8, 2020
